@@ -1,0 +1,19 @@
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Python Cache & Compiled Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Local Data/Outputs (Optional)
+# Uncomment the line below if you don't want to push your generated CSVs to GitHub
+# data/
+
+# Operating System Files
+.DS_Store
+Thumbs.db

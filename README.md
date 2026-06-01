@@ -1,6 +1,8 @@
+
+```
 # Wholesale Credit Risk & PD Analytics Engine
 
-An institutional-grade, end-to-end quantitative credit risk management pipeline and interactive simulation engine built entirely in Python using `pandas`, `numpy`, and `streamlit`. 
+An institutional-grade, end-to-end quantitative credit risk management pipeline and interactive simulation engine built entirely in Python using `pandas`, `numpy`, and `streamlit`.
 
 This engine simulates a portfolio of **1,000 corporate clients**, assesses their fundamental credit risk profiles using a structured scorecard methodology, maps metrics to explicit **Probability of Default (PD)** benchmarks, and features a forward-looking **Macroeconomic Stress-Testing Module** aligned with modern banking regulatory concepts (Basel III/IV framework framework frameworks).
 
@@ -56,3 +58,94 @@ The workspace is split into decoupled, modular components following strict softw
 ├── app.py                          # Streamlit interactive web application UI
 ├── requirements.txt                # Project code library dependencies
 └── README.md                       # Documentation
+```
+
+## 💻 Technical Setup & Installation
+
+### Prerequisites
+
+Tested on Linux distributions (**Pop!_OS / Ubuntu**). Ensure you have Python 3 installed.
+
+Bash
+
+```bash
+sudo apt update
+sudo apt install python3-pip python3-venv -y
+```
+
+### 1. Environment Deployment
+
+Clone the repository and initialize a virtual environment sandbox:
+
+Bash
+
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_GITHUB_USERNAME/wholesale-credit-risk-engine.git
+cd wholesale-credit-risk-engine
+
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 2. Dependency Management
+
+Install all essential math, visualization, and dashboard libraries:
+
+Bash
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Execution Options
+
+### Option A: Run the Backend Automated Pipeline
+
+To execute the data generator, run the credit engine, apply baseline stress testing, and save all data results to the `/data` folder inside a text console summary:
+
+Bash
+
+```bash
+python main.py
+```
+
+### Option B: Launch the Interactive Web App Dashboard
+
+To deploy the interactive interface locally to inspect visualizations and adjust macro sliders:
+
+Bash
+
+```bash
+streamlit run app.py
+```
+
+*Your browser will instantly launch to `http://localhost:8501`.*
+
+## 📈 Sample Analytical Output (Baseline vs Stressed)
+
+Plaintext
+
+```
+=============================================
+    RATING MIGRATION (BASELINE vs STRESSED)
+=============================================
+            Baseline (Healthy)  Stressed (Recession)
+risk_grade
+AAA-AA               89                   74
+A-BBB               185                   88
+BB                  350                  255
+B                   214                  290
+CCC-C               132                  200
+D                    30                   93
+=============================================
+Weighted Avg Portfolio PD (Base):    4.43%
+Weighted Avg Portfolio PD (Stressed):7.04%
+```
+
+*Observations:* Under a macro shock scenario (15% GDP contraction and +300bps interest rate surge), the engine successfully flags vulnerable, leveraged corporations—resulting in corporate defaults (`Risk Grade D`) more than tripling and the average portfolio portfolio-wide PD expanding from **4.43% to 7.04%**.
+
+## 📄 License
+
+This project is open-source and available under the MIT License.

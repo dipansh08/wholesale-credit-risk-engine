@@ -2,7 +2,7 @@
 
 An institutional-grade, end-to-end quantitative credit risk management pipeline and interactive simulation engine built entirely in Python using `pandas`, `numpy`, and `streamlit`.
 
-This engine simulates a portfolio of **1,000 corporate clients**, assesses their fundamental credit risk profiles using a structured scorecard methodology, maps metrics to explicit **Probability of Default (PD)** benchmarks, and features a forward-looking **Macroeconomic Stress-Testing Module** aligned with modern banking regulatory concepts (Basel III/IV framework framework frameworks).
+This engine simulates a portfolio of **1,000 corporate clients**, assesses their fundamental credit risk profiles using a structured scorecard methodology, maps metrics to explicit **Probability of Default (PD)** benchmarks, and features a forward-looking **Macroeconomic Stress-Testing Module** aligned with modern banking regulatory concepts (Basel III/IV frameworks).
 
 ---
 

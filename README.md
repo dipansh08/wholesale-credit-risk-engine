@@ -41,4 +41,18 @@ Ratios are assigned individual scores ($1 \text{ to } 5$) based on custom instit
 
 ## 🛠️ Project Architecture
 
-The
+The workspace is split into decoupled, modular components following strict software engineering principles:
+
+```text
+├── data/
+│   ├── corporate_portfolio.csv     # Raw generated client financials
+│   ├── portfolio_with_scores.csv   # Computed baseline scores & risk grades
+│   └── portfolio_stressed.csv      # Post-recession portfolio metrics
+├── src/
+│   ├── data_gen.py                 # Core synthetic client generator
+│   ├── pd_engine.py                # Ratio engine and credit scorecard mapping
+│   └── stress_test.py              # Macro shock simulation and sector elasticity logic
+├── main.py                         # Production backend automation runner
+├── app.py                          # Streamlit interactive web application UI
+├── requirements.txt                # Project code library dependencies
+└── README.md                       # Documentation

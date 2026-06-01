@@ -1,5 +1,3 @@
-
-```
 # Wholesale Credit Risk & PD Analytics Engine
 
 An institutional-grade, end-to-end quantitative credit risk management pipeline and interactive simulation engine built entirely in Python using `pandas`, `numpy`, and `streamlit`.

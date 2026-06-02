@@ -1,65 +1,49 @@
 import pandas as pd
 import numpy as np
+import config as cfg  # Import the new configuration layer
+
 def calculate_ratios(df):
     """Calculates core credit risk financial ratios with strict boundary guardrails."""
-    # Handle zero/negative liabilities cleanly
     df['current_ratio'] = df['current_assets'] / df['current_liabilities'].replace(0, 0.01)
-    
-    # FIX: If EBITDA is negative or zero, we preserve the sign but prevent division by zero.
-    # A negative EBITDA will yield a negative Debt/EBITDA ratio, which will correctly trigger the highest risk bin.
     df['debt_to_ebitda'] = df['total_debt'] / df['ebitda'].apply(lambda x: 0.01 if x == 0 else x)
-    
     df['interest_coverage'] = df['ebitda'] / df['interest_expense'].replace(0, 0.01)
     return df
 
 def score_metrics(df):
     """Scores financial ratios from 1 (highest risk) to 5 (lowest risk)."""
-
-    # 1. Current Ratio Scoring (Liquidity)
-    df['liq_score'] = pd.cut(df['current_ratio'],
-                             bins=[-np.inf, 0.8, 1.2, 1.5, 2.0, np.inf],
+    df['liq_score'] = pd.cut(df['current_ratio'], 
+                             bins=[-np.inf, 0.8, 1.2, 1.5, 2.0, np.inf], 
                              labels=[1, 2, 3, 4, 5]).astype(int)
-
-# FIX: Bins explicitly handle negative leverage ratios resulting from negative EBITDA
+    
     df['lev_score'] = pd.cut(df['debt_to_ebitda'], 
                              bins=[-np.inf, 0.0, 1.5, 3.0, 4.5, 6.0, np.inf], 
                              labels=[1, 5, 4, 3, 2, 1], ordered=False).astype(int)
-
-    # 3. Interest Coverage Scoring (Solvency)
-    df['solv_score'] = pd.cut(df['interest_coverage'],
-                             bins=[-np.inf, 1.0, 2.0, 4.0, 6.0, np.inf],
+    
+    df['solv_score'] = pd.cut(df['interest_coverage'], 
+                             bins=[-np.inf, 1.0, 2.0, 4.0, 6.0, np.inf], 
                              labels=[1, 2, 3, 4, 5]).astype(int)
     return df
 
 def map_score_to_pd_and_grade(df):
-    """Computes a weighted credit score, maps it to a PD, and assigns a Credit Grade."""
+    """Computes a weighted credit score, maps it to a PD, and assigns a Credit Grade using Config limits."""
+    # Use config weights
+    df['total_credit_score'] = (df['lev_score'] * cfg.WEIGHT_LEVERAGE) + \
+                               (df['solv_score'] * cfg.WEIGHT_SOLVENCY) + \
+                               (df['liq_score'] * cfg.WEIGHT_LIQUIDITY)
     
-    # Weights: Leverage (40%), Debt Service (40%), Liquidity (20%)
-    df['total_credit_score'] = (df['lev_score'] * 0.40) + (df['solv_score'] * 0.40) + (df['liq_score'] * 0.20)
-    
-    # FIX: Floor adjusted to 0.0 and include_lowest=True ensures scores of 1.0 are safely captured.
-    score_bins = [0.0, 1.8, 2.5, 3.2, 3.8, 4.3, 4.7, 5.1]
-    
-    # Standard Basel-style PD assignments
-    pd_mapping = [0.250, 0.120, 0.060, 0.030, 0.015, 0.005, 0.0005] 
-    
+    # Use config bins and mappings
     df['pd'] = pd.cut(
         df['total_credit_score'], 
-        bins=score_bins, 
-        labels=pd_mapping, 
+        bins=cfg.SCORE_BINS, 
+        labels=cfg.PD_MAPPING, 
         include_lowest=True
     ).astype(float)
     
-    # PRODUCTION GUARDRAIL: Explicitly check for data leakage before assigning grades
     if df['pd'].isna().any():
         missing_count = df['pd'].isna().sum()
         raise ValueError(f"CRITICAL RISK ENGINE ERROR: {missing_count} clients generated NaN PDs due to bin misalignment.")
     
-    # Map PD to institutional Credit Risk Rating Grades
-    grade_bins = [-1, 0.0009, 0.01, 0.04, 0.08, 0.15, np.inf]
-    grade_labels = ['AAA-AA', 'A-BBB', 'BB', 'B', 'CCC-C', 'D']
-    df['risk_grade'] = pd.cut(df['pd'], bins=grade_bins, labels=grade_labels)
-    
+    df['risk_grade'] = pd.cut(df['pd'], bins=cfg.GRADE_BINS, labels=cfg.GRADE_LABELS)
     return df
 
 def run_pd_pipeline(input_path='data/corporate_portfolio.csv', output_path='data/portfolio_with_scores.csv'):

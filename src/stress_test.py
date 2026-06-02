@@ -1,64 +1,38 @@
 import pandas as pd
 import numpy as np
-# Import functions from your existing PD engine to re-score the stressed data
+import config as cfg # Import configuration rules
 from pd_engine import calculate_ratios, score_metrics, map_score_to_pd_and_grade
 
-def apply_macro_shocks(df, gdp_shock_pct=0.15, rate_hike_bps=300):
+def apply_macro_shocks(df, gdp_shock_pct=cfg.DEFAULT_GDP_SHOCK, rate_hike_bps=cfg.DEFAULT_RATE_HIKE_BPS):
     """
     Applies an integrated macroeconomic shock to both the Income Statement 
-    and Balance Sheet metrics based on sector-specific elasticities.
+    and Balance Sheet metrics based on sector-specific elasticities from config.
     """
     stressed_df = df.copy()
     
-    # Sector-specific cyclicality multipliers
-    sector_sensitivities = {
-        'Real Estate': 1.5,
-        'Retail': 1.3,
-        'Manufacturing': 1.1,
-        'Energy': 1.0,
-        'Technology': 0.6,
-        'Healthcare': 0.4
-    }
-    
-    for sector, multiplier in sector_sensitivities.items():
+    # Iterate using config-driven sensibilities
+    for sector, multiplier in cfg.SECTOR_SENSITIVITIES.items():
         sector_mask = stressed_df['sector'] == sector
-        # Base impact scaling factor per sector
         severity_factor = gdp_shock_pct * multiplier
         revenue_impact = 1.0 - severity_factor
         
-        # ----------------------------------------------------
-        # 1. Income Statement Shocks
-        # ----------------------------------------------------
+        # Income statement shocks
         stressed_df.loc[sector_mask, 'revenue'] *= revenue_impact
         stressed_df.loc[sector_mask, 'ebitda'] *= revenue_impact
-        # Net income degrades faster due to fixed operating leverage
         stressed_df.loc[sector_mask, 'net_income'] *= (1.0 - (severity_factor * 1.3))
         
-        # ----------------------------------------------------
-        # 2. Balance Sheet & Liquidity Shocks (ICAAP Alignment)
-        # ----------------------------------------------------
-        # Real Estate and Capital Assets compress during asset price deflation
+        # Balance sheet shocks
         asset_drop_multiplier = 0.8 if sector == 'Real Estate' else 0.95
         stressed_df.loc[sector_mask, 'total_assets'] *= (1.0 - (severity_factor * asset_drop_multiplier))
-        
-        # Cash drawdown: Firms burn cash reserves to fund working capital deficits
         stressed_df.loc[sector_mask, 'cash'] *= (1.0 - (severity_factor * 1.5))
-        
-        # Receivables & Inventory lockup extends current assets superficially, 
-        # but liquid cash destruction pulls the overall bucket down
         stressed_df.loc[sector_mask, 'current_assets'] *= (1.0 - (severity_factor * 0.5))
-        
-        # Short-term obligations spike as revolving credit facilities are fully drawn
         stressed_df.loc[sector_mask, 'current_liabilities'] *= (1.0 + (severity_factor * 0.8))
         
-    # ----------------------------------------------------
-    # 3. Monetary Policy / Interest Rate Shock
-    # ----------------------------------------------------
+    # Interest rate tightening
     rate_increase = rate_hike_bps / 10000
     additional_interest = stressed_df['total_debt'] * rate_increase
     stressed_df['interest_expense'] += additional_interest
     
-    # Floor metrics at zero to prevent mathematically impossible negative balances
     numeric_cols = stressed_df.select_dtypes(include=[np.number]).columns
     stressed_df[numeric_cols] = stressed_df[numeric_cols].clip(lower=0)
     

@@ -1,11 +1,14 @@
 import pandas as pd
 import numpy as np
-
 def calculate_ratios(df):
-    """Calculates core credit risk financial ratios."""
-    # Avoid division by zero by replacing 0 or negative values with small positive numbers where appropriate
+    """Calculates core credit risk financial ratios with strict boundary guardrails."""
+    # Handle zero/negative liabilities cleanly
     df['current_ratio'] = df['current_assets'] / df['current_liabilities'].replace(0, 0.01)
-    df['debt_to_ebitda'] = df['total_debt'] / df['ebitda'].apply(lambda x: max(x, 1000))
+    
+    # FIX: If EBITDA is negative or zero, we preserve the sign but prevent division by zero.
+    # A negative EBITDA will yield a negative Debt/EBITDA ratio, which will correctly trigger the highest risk bin.
+    df['debt_to_ebitda'] = df['total_debt'] / df['ebitda'].apply(lambda x: 0.01 if x == 0 else x)
+    
     df['interest_coverage'] = df['ebitda'] / df['interest_expense'].replace(0, 0.01)
     return df
 
@@ -17,10 +20,10 @@ def score_metrics(df):
                              bins=[-np.inf, 0.8, 1.2, 1.5, 2.0, np.inf],
                              labels=[1, 2, 3, 4, 5]).astype(int)
 
-    # 2. Debt to EBITDA Scoring (Leverage) - Note: Lower debt/ebitda is BETTER, so bins are reversed
-    df['lev_score'] = pd.cut(df['debt_to_ebitda'],
-                             bins=[-np.inf, 1.5, 3.0, 4.5, 6.0, np.inf],
-                             labels=[5, 4, 3, 2, 1]).astype(int)
+# FIX: Bins explicitly handle negative leverage ratios resulting from negative EBITDA
+    df['lev_score'] = pd.cut(df['debt_to_ebitda'], 
+                             bins=[-np.inf, 0.0, 1.5, 3.0, 4.5, 6.0, np.inf], 
+                             labels=[1, 5, 4, 3, 2, 1], ordered=False).astype(int)
 
     # 3. Interest Coverage Scoring (Solvency)
     df['solv_score'] = pd.cut(df['interest_coverage'],

@@ -5,13 +5,12 @@ from pd_engine import calculate_ratios, score_metrics, map_score_to_pd_and_grade
 
 def apply_macro_shocks(df, gdp_shock_pct=0.15, rate_hike_bps=300):
     """
-    Applies macroeconomic shocks to the corporate financials.
-    - gdp_shock_pct: Overall revenue reduction factor (e.g., 0.15 = 15% drop)
-    - rate_hike_bps: Basis point increase to borrowing costs (e.g., 300 = +3.0%)
+    Applies an integrated macroeconomic shock to both the Income Statement 
+    and Balance Sheet metrics based on sector-specific elasticities.
     """
     stressed_df = df.copy()
-
-    # 1. Sector-specific revenue & EBITDA elasticities (Some sectors are more cyclical)
+    
+    # Sector-specific cyclicality multipliers
     sector_sensitivities = {
         'Real Estate': 1.5,
         'Retail': 1.3,
@@ -20,25 +19,49 @@ def apply_macro_shocks(df, gdp_shock_pct=0.15, rate_hike_bps=300):
         'Technology': 0.6,
         'Healthcare': 0.4
     }
-
-    # Apply revenue and EBITDA shocks based on sector vulnerability
+    
     for sector, multiplier in sector_sensitivities.items():
         sector_mask = stressed_df['sector'] == sector
-        impact_factor = 1.0 - (gdp_shock_pct * multiplier)
-
-        # Shock Revenue and EBITDA
-        stressed_df.loc[sector_mask, 'revenue'] *= impact_factor
-        stressed_df.loc[sector_mask, 'ebitda'] *= impact_factor
-        stressed_df.loc[sector_mask, 'net_income'] *= (impact_factor * 0.8) # Net income drops faster due to fixed costs
-
-    # 2. Interest Rate Shock
-    # Convert bps to decimal (300 bps = 0.03)
+        # Base impact scaling factor per sector
+        severity_factor = gdp_shock_pct * multiplier
+        revenue_impact = 1.0 - severity_factor
+        
+        # ----------------------------------------------------
+        # 1. Income Statement Shocks
+        # ----------------------------------------------------
+        stressed_df.loc[sector_mask, 'revenue'] *= revenue_impact
+        stressed_df.loc[sector_mask, 'ebitda'] *= revenue_impact
+        # Net income degrades faster due to fixed operating leverage
+        stressed_df.loc[sector_mask, 'net_income'] *= (1.0 - (severity_factor * 1.3))
+        
+        # ----------------------------------------------------
+        # 2. Balance Sheet & Liquidity Shocks (ICAAP Alignment)
+        # ----------------------------------------------------
+        # Real Estate and Capital Assets compress during asset price deflation
+        asset_drop_multiplier = 0.8 if sector == 'Real Estate' else 0.95
+        stressed_df.loc[sector_mask, 'total_assets'] *= (1.0 - (severity_factor * asset_drop_multiplier))
+        
+        # Cash drawdown: Firms burn cash reserves to fund working capital deficits
+        stressed_df.loc[sector_mask, 'cash'] *= (1.0 - (severity_factor * 1.5))
+        
+        # Receivables & Inventory lockup extends current assets superficially, 
+        # but liquid cash destruction pulls the overall bucket down
+        stressed_df.loc[sector_mask, 'current_assets'] *= (1.0 - (severity_factor * 0.5))
+        
+        # Short-term obligations spike as revolving credit facilities are fully drawn
+        stressed_df.loc[sector_mask, 'current_liabilities'] *= (1.0 + (severity_factor * 0.8))
+        
+    # ----------------------------------------------------
+    # 3. Monetary Policy / Interest Rate Shock
+    # ----------------------------------------------------
     rate_increase = rate_hike_bps / 10000
-
-    # Calculate additional interest expense on existing total debt
     additional_interest = stressed_df['total_debt'] * rate_increase
     stressed_df['interest_expense'] += additional_interest
-
+    
+    # Floor metrics at zero to prevent mathematically impossible negative balances
+    numeric_cols = stressed_df.select_dtypes(include=[np.number]).columns
+    stressed_df[numeric_cols] = stressed_df[numeric_cols].clip(lower=0)
+    
     return stressed_df
 
 def run_stress_test_pipeline(input_path='data/portfolio_with_scores.csv', output_path='data/portfolio_stressed.csv'):

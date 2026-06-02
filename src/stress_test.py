@@ -78,11 +78,12 @@ def run_stress_test_pipeline(input_path='data/portfolio_with_scores.csv', output
     print(comparison_df)
     print("=============================================")
 
-    # Calculate portfolio-level metric
-    avg_pd_base = baseline_df['pd'].mean() * 100
-    avg_pd_stress = stressed_df['pd'].mean() * 100
-    print(f"Weighted Avg Portfolio PD (Base):    {avg_pd_base:.2f}%")
-    print(f"Weighted Avg Portfolio PD (Stressed):{avg_pd_stress:.2f}%")
+    # FIX: Calculate true Exposure-Weighted Average Portfolio PD using total_debt as EAD
+    avg_pd_base = np.average(baseline_df['pd'], weights=baseline_df['total_debt']) * 100
+    avg_pd_stress = np.average(stressed_df['pd'], weights=stressed_df['total_debt']) * 100
+    
+    print(f"Exposure-Weighted Avg Portfolio PD (Base):    {avg_pd_base:.2f}%")
+    print(f"Exposure-Weighted Avg Portfolio PD (Stressed):{avg_pd_stress:.2f}%")
 
 if __name__ == "__main__":
     run_stress_test_pipeline()

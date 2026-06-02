@@ -1,4 +1,3 @@
-import streamlit as tf
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -61,15 +60,17 @@ stressed_df = map_score_to_pd_and_grade(stressed_df)
 # ==========================================
 col1, col2, col3, col4 = st.columns(4)
 
-avg_pd_base = baseline_df['pd'].mean() * 100
-avg_pd_stress = stressed_df['pd'].mean() * 100
+# FIX: True Exposure-Weighted Average Portfolio PD calculation
+avg_pd_base = np.average(baseline_df['pd'], weights=baseline_df['total_debt']) * 100
+avg_pd_stress = np.average(stressed_df['pd'], weights=stressed_df['total_debt']) * 100
+
 defaults_base = (baseline_df['risk_grade'] == 'D').sum()
 defaults_stress = (stressed_df['risk_grade'] == 'D').sum()
 
 with col1:
-    st.metric("Baseline Avg Portfolio PD", f"{avg_pd_base:.2f}%")
+    st.metric("Weighted Avg Portfolio PD (Base)", f"{avg_pd_base:.2f}%")
 with col2:
-    st.metric("Stressed Avg Portfolio PD", f"{avg_pd_stress:.2f}%", delta=f"{avg_pd_stress - avg_pd_base:+.2f}%", delta_color="inverse")
+    st.metric("Weighted Avg Portfolio PD (Stressed)", f"{avg_pd_stress:.2f}%", delta=f"{avg_pd_stress - avg_pd_base:+.2f}%", delta_color="inverse")
 with col3:
     st.metric("Baseline Corporate Defaults", f"{defaults_base} / 1000")
 with col4:

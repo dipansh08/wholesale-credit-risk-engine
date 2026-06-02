@@ -30,24 +30,33 @@ def score_metrics(df):
 
 def map_score_to_pd_and_grade(df):
     """Computes a weighted credit score, maps it to a PD, and assigns a Credit Grade."""
-
+    
     # Weights: Leverage (40%), Debt Service (40%), Liquidity (20%)
     df['total_credit_score'] = (df['lev_score'] * 0.40) + (df['solv_score'] * 0.40) + (df['liq_score'] * 0.20)
-
-    # Map the 1-5 score to a realistic Probability of Default (PD) percentage
-    # High score (5) -> Low PD (0.05% default chance)
-    # Low score (1) -> High PD (25.0% default chance)
-    score_bins = [0.9, 1.8, 2.5, 3.2, 3.8, 4.3, 4.7, 5.1]
-
+    
+    # FIX: Floor adjusted to 0.0 and include_lowest=True ensures scores of 1.0 are safely captured.
+    score_bins = [0.0, 1.8, 2.5, 3.2, 3.8, 4.3, 4.7, 5.1]
+    
     # Standard Basel-style PD assignments
-    pd_mapping = [0.250, 0.120, 0.060, 0.030, 0.015, 0.005, 0.0005]
-    df['pd'] = pd.cut(df['total_credit_score'], bins=score_bins, labels=pd_mapping).astype(float)
-
+    pd_mapping = [0.250, 0.120, 0.060, 0.030, 0.015, 0.005, 0.0005] 
+    
+    df['pd'] = pd.cut(
+        df['total_credit_score'], 
+        bins=score_bins, 
+        labels=pd_mapping, 
+        include_lowest=True
+    ).astype(float)
+    
+    # PRODUCTION GUARDRAIL: Explicitly check for data leakage before assigning grades
+    if df['pd'].isna().any():
+        missing_count = df['pd'].isna().sum()
+        raise ValueError(f"CRITICAL RISK ENGINE ERROR: {missing_count} clients generated NaN PDs due to bin misalignment.")
+    
     # Map PD to institutional Credit Risk Rating Grades
     grade_bins = [-1, 0.0009, 0.01, 0.04, 0.08, 0.15, np.inf]
     grade_labels = ['AAA-AA', 'A-BBB', 'BB', 'B', 'CCC-C', 'D']
     df['risk_grade'] = pd.cut(df['pd'], bins=grade_bins, labels=grade_labels)
-
+    
     return df
 
 def run_pd_pipeline(input_path='data/corporate_portfolio.csv', output_path='data/portfolio_with_scores.csv'):

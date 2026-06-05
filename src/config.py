@@ -36,7 +36,7 @@ WEIGHT_LIQUIDITY = 0.20
 
 # PD Score Assignment Threshold Bins
 SCORE_BINS = [0.0, 1.8, 2.5, 3.2, 3.8, 4.3, 4.7, 5.1]
-PD_MAPPING = [0.250, 0.120, 0.060, 0.030, 0.015, 0.005, 0.0005] 
+PD_MAPPING = [0.250, 0.120, 0.060, 0.030, 0.015, 0.005, 0.0005]
 
 # Credit Rating Grade Mapping Cutoffs
 GRADE_BINS = [-1, 0.0009, 0.01, 0.04, 0.08, 0.15, np.inf]
@@ -57,4 +57,17 @@ SECTOR_SENSITIVITIES = {
     'Energy': 1.0,
     'Technology': 0.6,
     'Healthcare': 0.4
+}
+
+# Sector-specific asset haircut multipliers under stress.
+# Applied as: total_assets *= (1 - severity_factor * haircut)
+# Real Estate takes a heavier collateral hit (0.80) vs other sectors (0.95)
+# Source: EBA 2023 Adverse Scenario asset valuation guidance.
+SECTOR_ASSET_HAIRCUTS = {
+    'Real Estate': 0.80,
+    'Retail': 0.95,
+    'Manufacturing': 0.95,
+    'Energy': 0.95,
+    'Technology': 0.95,
+    'Healthcare': 0.95
 }

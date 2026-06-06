@@ -140,7 +140,7 @@ sudo apt install python3-pip python3-venv -y
 ### 1. Environment Setup
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/wholesale-credit-risk-engine.git
+git clone https://github.com/dipansh08/wholesale-credit-risk-engine.git
 cd wholesale-credit-risk-engine
 
 python3 -m venv venv
